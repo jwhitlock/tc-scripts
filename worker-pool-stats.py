@@ -145,7 +145,7 @@ def worker_summary(workers):
     pool_id_len = max(len('Pool ID'), max(len(key[0]) for key in keys))
     group_len = max(len('Group ID'), max(len(key[1]) for key in keys))
     provider_len = max(len('Provider ID'), max(len(key[2]) for key in keys))
-    state_len = max(len('State'), max(len(key[3]) for key in keys))
+    state_len = max(len(state) for state in known_states)
     workers_len = len('Workers')
     capacity_len = len('Capacity')
     col = "  "
