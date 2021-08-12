@@ -34,7 +34,13 @@ pip install -r requirements.txt
 
 ## worker-pool-stats.py - Worker Pool Stats
 
-Output of ``./worker-pool-stats.py``:
+This script can be used to:
+
+* Summarize the workers and capacity in a pool by group and status (default)
+* Export detailed data in CSV (``--csv-file CSV_FILE``) and JSON (``--json-file JSON FILE``) formats
+* Use previously exported JSON data instead of calling the API (useful for rapid script development)
+
+Output of ``./worker-pool-stats.py --help``:
 
 ```
 usage: worker-pool-stats.py [-h] [--csv-file CSV_FILE] [--json-file JSON_FILE] [--from-json-file FROM_JSON_FILE]
