@@ -214,7 +214,7 @@ if __name__ == "__main__":
     auth_options = taskcluster.optionsFromEnvironment()
     parser = get_parser()
     args = parser.parse_args()
-    if not auth_options:
+    if not auth_options and not args.from_json_file:
         print("TASKCLUSTER_ROOT_URL not in environment, see README.md")
         sys.exit(1)
     if args.verbose and args.verbose >= 2:
