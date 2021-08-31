@@ -32,7 +32,7 @@ and then an install:
 pip install -r requirements.txt
 ```
 
-## worker-pool-stats.py - Worker Pool Stats
+## worker_pool_stats.py - Worker Pool Stats
 
 This script can be used to:
 
@@ -40,12 +40,10 @@ This script can be used to:
 * Export detailed data in CSV (``--csv-file CSV_FILE``) and JSON (``--json-file JSON FILE``) formats
 * Use previously exported JSON data instead of calling the API (useful for rapid script development)
 
-Output of ``./worker-pool-stats.py --help``:
+Output of ``./worker_pool_stats.py --help``:
 
 ```
-usage: worker-pool-stats.py [-h] [--csv-file CSV_FILE] [--json-file JSON_FILE] [--from-json-file FROM_JSON_FILE]
-                            [-v]
-                            pool_id
+usage: worker_pool_stats.py [-h] [--csv-file CSV_FILE] [--full-datetimes] [--json-file JSON_FILE] [--from-json-file FROM_JSON_FILE] [-v] [pool_id]
 
 Examine workers in a worker pool, print a summary.
 
@@ -55,6 +53,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --csv-file CSV_FILE   Output worker data in CSV format
+  --full-datetimes      In CSV, retain microseconds and timezone in date/times, which may prevent them being parsed as dates.
   --json-file JSON_FILE
                         Output worker data in JSON format
   --from-json-file FROM_JSON_FILE
