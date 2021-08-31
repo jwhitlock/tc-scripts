@@ -2,9 +2,11 @@
 
 from collections import defaultdict
 from csv import DictWriter
+from datetime import datetime, timezone
 import argparse
 import json
 import logging
+import re
 import sys
 
 import taskcluster
@@ -18,7 +20,8 @@ def main(
         verbose=False,
         json_file=None,
         from_json_file=None,
-        csv_file=None
+        csv_file=None,
+        full_csv_datetimes=False
     ):
     """
     Collect and summarize worker data for a pool
@@ -29,6 +32,9 @@ def main(
     json_file - Path to a file to store worker data as JSON
     from_json_file - Load worker data from a JSON file instead of API
     csv_file - Path to a file to store worker data as a CSV
+    full_csv_datetimes - If True, keep microseconds and timezones on dates.
+      This may prevent them from being interpreted as dates by spreadsheet
+      programs.
     """
     if from_json_file:
         with open(from_json_file, 'r') as the_file:
@@ -51,7 +57,7 @@ def main(
         if verbose:
             logger.info(f"Writing worker data to {csv_file}...")
         with open(csv_file, 'w', newline='') as the_file:
-            to_csv(workers, the_file)
+            to_csv(workers, the_file, full_csv_datetimes)
         if verbose:
             logger.info(f"Done writing {csv_file}.")
 
@@ -87,8 +93,20 @@ def get_pool_workers(worker_manager, pool_id, verbose=False):
         logger.info(f"Found {len(workers)} workers.")
     return workers
 
+RE_DATETIME = re.compile(r"""
+^(?P<year>[0-9]{4})-    # Year, followed by dash
+(?P<month>[01][0-9])-   # Month, followed by dash
+(?P<day>[0-3][0-9])T    # Day, followed by T
+(?P<hour>[0-5][0-9]):   # Hour, followed by colon
+(?P<minute>[0-5][0-9]): # Minute, followed by colon
+(?P<second>[0-5][0-9])  # Second
+\.?                     # Optional period
+(?P<msecond>[0-9]{3})   # Optional millisecond
+Z                       # Z for 00:00
+""", re.VERBOSE)
 
-def to_csv(workers, csv_file):
+
+def to_csv(workers, csv_file, full_csv_datetimes=False):
     """
     Ouput worker data to a CSV file.
 
@@ -108,8 +126,25 @@ def to_csv(workers, csv_file):
     # Output to CSV
     output = DictWriter(csv_file, fieldnames=headers)
     output.writeheader()
-    output.writerows(workers)
-
+    date_keys = set(("created", "expires", "lastModified", "lastChecked"))
+    for row_num, raw_worker in enumerate(workers):
+        row = {}
+        for key, raw_value in raw_worker.items():
+            # Convert datetime strings to timezone-naive datetimes w/o fractional seconds
+            if key in date_keys:
+                dt_match = RE_DATETIME.match(raw_value)
+                if not dt_match:
+                    logger.error(f"Failed to match datetime on row {row_num} for {key} with value {raw_value!r}")
+                    assert dt_match
+                year, month, day, hour, minute, second, millisecond = dt_match.groups()
+                if full_csv_datetimes:
+                    value = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), 1000 * int(millisecond or 0), timezone.utc)
+                else:
+                    value = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second))
+            else:
+                value = raw_value
+            row[key] = value
+        output.writerow(row)
 
 
 def worker_summary(workers):
@@ -197,6 +232,11 @@ def get_parser():
         '--csv-file',
         help="Output worker data in CSV format")
     parser.add_argument(
+        '--full-datetimes',
+        action='store_true',
+        help=("In CSV, retain microseconds and timezone in date/times,"
+              " which may prevent them being parsed as dates."))
+    parser.add_argument(
         '--json-file',
         help="Output worker data in JSON format")
     parser.add_argument(
@@ -229,5 +269,6 @@ if __name__ == "__main__":
         csv_file=args.csv_file,
         json_file=args.json_file,
         from_json_file=args.from_json_file,
+        full_csv_datetimes=args.full_datetimes
     )
     sys.exit(retcode)
