@@ -227,6 +227,7 @@ def get_parser():
         description="Examine workers in a worker pool, print a summary.")
     parser.add_argument(
         'pool_id',
+        nargs='?',
         help="Pool identifier, like 'gecko-t/win10-64-2004'")
     parser.add_argument(
         '--csv-file',
@@ -257,6 +258,8 @@ if __name__ == "__main__":
     if not auth_options and not args.from_json_file:
         print("TASKCLUSTER_ROOT_URL not in environment, see README.md")
         sys.exit(1)
+    if not args.pool_id and not args.from_json_file:
+        parser.error("The following arguments are required: pool_id")
     if args.verbose and args.verbose >= 2:
         level = 'DEBUG'
     else:
