@@ -60,3 +60,29 @@ optional arguments:
                         Get worker data from JSON file instead of API
   -v, --verbose         Print debugging information, repeat for more detail
 ```
+
+## worker_pool_type.py - Detailed worker pool configuration
+
+This script can be used to:
+
+* Output the worker configurations as a text table
+* Output the detailed worker configurations as a CSV
+
+Output of ``./worker_pool_type.py --help``:
+
+```
+usage: worker_pool_types.py [-h] [--csv-file CSV_FILE] [--full-datetimes] [--json-file JSON_FILE] [--from-json-file FROM_JSON_FILE]
+                            [-v]
+
+Get all worker pools configurations
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --csv-file CSV_FILE   Output worker pool data in CSV format
+  --full-datetimes      In CSV, retain microseconds and timezone in date/times, which may prevent them being parsed as dates.
+  --json-file JSON_FILE
+                        Output worker pool data in JSON format
+  --from-json-file FROM_JSON_FILE
+                        Get worker pool data from JSON file instead of API
+  -v, --verbose         Print debugging information, repeat for more detail
+```
