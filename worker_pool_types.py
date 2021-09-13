@@ -21,7 +21,8 @@ def main(
         json_file=None,
         from_json_file=None,
         csv_file=None,
-        full_csv_datetimes=False
+        full_csv_datetimes=False,
+        csv_set=None,
     ):
     """
     Collect and summarize worker data for a pool
@@ -34,6 +35,7 @@ def main(
     full_csv_datetimes - If True, keep microseconds and timezones on dates.
       This may prevent them from being interpreted as dates by spreadsheet
       programs.
+    csv_set - A identifer for a restricted set of CSV output columns
     """
     if from_json_file:
         with open(from_json_file, 'r') as the_file:
@@ -54,7 +56,7 @@ def main(
         if verbose:
             logger.info(f"Writing worker pool data to {csv_file}...")
         with open(csv_file, 'w', newline='') as the_file:
-            to_csv(pools, the_file, full_csv_datetimes)
+            to_csv(pools, the_file, full_csv_datetimes, csv_set)
         if verbose:
             logger.info(f"Done writing {csv_file}.")
 
@@ -89,6 +91,22 @@ def get_worker_pools(worker_manager, verbose=False):
     if verbose:
         logger.info(f"Found {len(pools)} worker pools.")
     return pools
+
+CSV_SET = {
+    "amis": {
+        "description": "Determine unique AMIs",
+        "columns": [
+            "workerPoolId",
+            "providerId",
+            "created",
+            "lastModified",
+            "owner",
+            "lc_launchConfig_ImageId",
+            "lc_region",
+            "lc_disks_0_initializeParams_sourceImage",
+        ],
+    }
+}
 
 RE_DATETIME = re.compile(r"""
 ^(?P<year>[0-9]{4})-    # Year, followed by dash
@@ -135,7 +153,7 @@ def flatten_config(config_dict, prefix="", suffix=False):
     return ret
 
 
-def to_csv(pools, csv_file, full_csv_datetimes=False):
+def to_csv(pools, csv_file, full_csv_datetimes=False, csv_set=None):
     """
     Ouput worker pool data to a CSV file.
 
@@ -160,11 +178,28 @@ def to_csv(pools, csv_file, full_csv_datetimes=False):
                     header_set.add(key)
                     headers.append(key)
 
+    # Pick a smaller set if requested
+    if csv_set:
+        columns = CSV_SET[csv_set]["columns"]
+        counts = defaultdict(int)
+        for flat_config in flat_configs:
+            out_key = tuple(flat_config.get(key, '') for key in columns)
+            counts[out_key] += 1
+        output_flat_configs = []
+        for row in sorted(counts.keys()):
+            out = dict(zip(columns, row))
+            out["launch_config_count"] = counts[row]
+            output_flat_configs.append(out)
+        out_headers = columns + ["launch_config_count"]
+    else:
+        out_headers = headers
+        output_flat_configs = flat_configs
+
     # Output to CSV
-    output = DictWriter(csv_file, fieldnames=headers)
+    output = DictWriter(csv_file, fieldnames=out_headers)
     output.writeheader()
     date_keys = set(("created", "expires", "lastModified", "lastChecked"))
-    for row_num, raw_pool in enumerate(flat_configs):
+    for row_num, raw_pool in enumerate(output_flat_configs):
         row = {}
         for key, raw_value in raw_pool.items():
             # Convert datetime strings to timezone-naive datetimes w/o fractional seconds
@@ -243,6 +278,12 @@ def get_parser():
         action='store_true',
         help=("In CSV, retain microseconds and timezone in date/times,"
               " which may prevent them being parsed as dates."))
+    set_helps = [f"{key}={val['description']}" for key, val in CSV_SET.items()]
+    parser.add_argument(
+        '--csv-set',
+        help="Select a set of columns for the CSV (" + ", ".join(set_helps) + ")",
+        choices=CSV_SET.keys()
+    )
     parser.add_argument(
         '--json-file',
         help="Output worker pool data in JSON format")
@@ -275,6 +316,7 @@ if __name__ == "__main__":
         csv_file=args.csv_file,
         json_file=args.json_file,
         from_json_file=args.from_json_file,
-        full_csv_datetimes=args.full_datetimes
+        full_csv_datetimes=args.full_datetimes,
+        csv_set=args.csv_set
     )
     sys.exit(retcode)
