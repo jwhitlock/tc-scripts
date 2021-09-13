@@ -23,6 +23,7 @@ def main(
         csv_file=None,
         full_csv_datetimes=False,
         csv_set=None,
+        skip_summary=False,
     ):
     """
     Collect and summarize worker data for a pool
@@ -36,6 +37,7 @@ def main(
       This may prevent them from being interpreted as dates by spreadsheet
       programs.
     csv_set - A identifer for a restricted set of CSV output columns
+    skip_summary - Do not print the summary
     """
     if from_json_file:
         with open(from_json_file, 'r') as the_file:
@@ -66,7 +68,8 @@ def main(
         if verbose:
             logger.info(f"Wrote JSON worker pool data to {json_file}.")
 
-    print(worker_pool_summary(pools))
+    if not skip_summary:
+        print(worker_pool_summary(pools))
 
     return 0
 
@@ -93,19 +96,54 @@ def get_worker_pools(worker_manager, verbose=False):
     return pools
 
 CSV_SET = {
-    "amis": {
-        "description": "Determine unique AMIs",
+    "images": {
+        "description": "AWS/GCP/Azure images by pool",
         "columns": [
             "workerPoolId",
             "providerId",
             "created",
             "lastModified",
             "owner",
+            "lc_region",
             "lc_launchConfig_ImageId",
+            "lc_disks_0_initializeParams_sourceImage",
+            "lc_location",
+            "lc_storageProfile_imageReference_id",
+        ],
+    },
+    "aws-images": {
+        "description": "Unique AWS AMIs",
+        "columns": [
+            "providerId",
+            "lc_region",
+            "lc_launchConfig_ImageId",
+        ],
+        "omit_if_blank": [
+            "lc_launchConfig_ImageId"
+        ],
+    },
+    "gcp-images": {
+        "description": "Unique GCP images",
+        "columns": [
+            "providerId",
             "lc_region",
             "lc_disks_0_initializeParams_sourceImage",
         ],
-    }
+        "omit_if_blank": [
+            "lc_disks_0_initializeParams_sourceImage"
+        ],
+    },
+    "azure-images": {
+        "description": "Unique Azure images",
+        "columns": [
+            "providerId",
+            "lc_location",
+            "lc_storageProfile_imageReference_id",
+        ],
+        "omit_if_blank": [
+            "lc_storageProfile_imageReference_id",
+        ],
+    },
 }
 
 RE_DATETIME = re.compile(r"""
@@ -181,6 +219,7 @@ def to_csv(pools, csv_file, full_csv_datetimes=False, csv_set=None):
     # Pick a smaller set if requested
     if csv_set:
         columns = CSV_SET[csv_set]["columns"]
+        omit_if_blank = set(CSV_SET[csv_set].get("omit_if_blank", []))
         counts = defaultdict(int)
         for flat_config in flat_configs:
             out_key = tuple(flat_config.get(key, '') for key in columns)
@@ -189,6 +228,8 @@ def to_csv(pools, csv_file, full_csv_datetimes=False, csv_set=None):
         for row in sorted(counts.keys()):
             out = dict(zip(columns, row))
             out["launch_config_count"] = counts[row]
+            if not all(out.get(col) for col in omit_if_blank):
+                continue
             output_flat_configs.append(out)
         out_headers = columns + ["launch_config_count"]
     else:
@@ -291,6 +332,10 @@ def get_parser():
         '--from-json-file',
         help="Get worker pool data from JSON file instead of API")
     parser.add_argument(
+        '--skip-summary',
+        help="Skip summary",
+        action="store_true")
+    parser.add_argument(
         '-v',
         '--verbose',
         action='count',
@@ -317,6 +362,7 @@ if __name__ == "__main__":
         json_file=args.json_file,
         from_json_file=args.from_json_file,
         full_csv_datetimes=args.full_datetimes,
-        csv_set=args.csv_set
+        csv_set=args.csv_set,
+        skip_summary=args.skip_summary
     )
     sys.exit(retcode)

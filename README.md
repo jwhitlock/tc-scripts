@@ -71,18 +71,35 @@ This script can be used to:
 Output of ``./worker_pool_type.py --help``:
 
 ```
-usage: worker_pool_types.py [-h] [--csv-file CSV_FILE] [--full-datetimes] [--json-file JSON_FILE] [--from-json-file FROM_JSON_FILE]
-                            [-v]
+usage: worker_pool_types.py [-h] [--csv-file CSV_FILE] [--full-datetimes]
+                            [--csv-set {images,aws-images,gcp-images,azure-images}]
+                            [--json-file JSON_FILE] [--from-json-file FROM_JSON_FILE]
+                            [--skip-summary] [-v]
 
 Get all worker pools configurations
 
 optional arguments:
   -h, --help            show this help message and exit
   --csv-file CSV_FILE   Output worker pool data in CSV format
-  --full-datetimes      In CSV, retain microseconds and timezone in date/times, which may prevent them being parsed as dates.
+  --full-datetimes      In CSV, retain microseconds and timezone in date/times, which may
+                        prevent them being parsed as dates.
+  --csv-set {images,aws-images,gcp-images,azure-images}
+                        Select a set of columns for the CSV (images=AWS/GCP/Azure images by
+                        pool, aws-images=Unique AWS AMIs, gcp-images=Unique GCP images, azure-
+                        images=Unique Azure images)
   --json-file JSON_FILE
                         Output worker pool data in JSON format
   --from-json-file FROM_JSON_FILE
                         Get worker pool data from JSON file instead of API
+  --skip-summary        Skip summary
   -v, --verbose         Print debugging information, repeat for more detail
+```
+
+## get_worker_pool_types.sh
+
+Use ``worker_pool_type.py`` to generate a set of JSON and CSVs:
+
+```
+./get_worker_pool_types.sh
+ls wpt
 ```
